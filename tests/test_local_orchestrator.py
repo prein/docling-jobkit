@@ -64,7 +64,12 @@ async def orchestrator(artifacts_path: Path):
 
     remote_models = not bool(os.getenv("CI"))
     cm_config = DoclingConverterManagerConfig(
-        enable_remote_services=remote_models, artifacts_path=artifacts_path
+        enable_remote_services=remote_models,
+        artifacts_path=artifacts_path,
+        # Enable custom configs for testing both preset and custom config paths
+        allow_custom_vlm_config=True,
+        allow_custom_picture_description_config=True,
+        allow_custom_code_formula_config=True,
     )
     cm = DoclingConverterManager(config=cm_config)
 
@@ -93,7 +98,13 @@ async def replicated_orchestrator(artifacts_path: Path):
         shared_models=False,
     )
 
-    cm_config = DoclingConverterManagerConfig(artifacts_path=artifacts_path)
+    cm_config = DoclingConverterManagerConfig(
+        artifacts_path=artifacts_path,
+        # Enable custom configs for testing
+        allow_custom_vlm_config=True,
+        allow_custom_picture_description_config=True,
+        allow_custom_code_formula_config=True,
+    )
     cm = DoclingConverterManager(config=cm_config)
 
     orchestrator = LocalOrchestrator(config=config, converter_manager=cm)
@@ -150,34 +161,67 @@ class TestOption:
 
 
 def convert_options_gen() -> Iterable[TestOption]:
+    """Generate test options for both deprecated and new configuration styles.
+
+    Tests with '_DEPRECATED' suffix use legacy fields and should trigger deprecation warnings.
+    Tests without the suffix use the new preset/custom_config system.
+    """
+    # Default configuration (no VLM)
     options = ConvertDocumentsOptions()
     yield TestOption(options=options, name="default", ci=True)
 
+    # VLM with default settings (no specific model)
     options = ConvertDocumentsOptions(
         pipeline=ProcessingPipeline.VLM,
     )
     yield TestOption(options=options, name="vlm_default", ci=False)
 
+    # DEPRECATED: VLM with model enum
     options = ConvertDocumentsOptions(
         pipeline=ProcessingPipeline.VLM,
         vlm_pipeline_model=vlm_model_specs.VlmModelType.GRANITEDOCLING,
     )
-    yield TestOption(options=options, name="vlm_granitedocling", ci=False)
+    yield TestOption(options=options, name="vlm_granitedocling_DEPRECATED", ci=False)
 
-    # options = ConvertDocumentsOptions(
-    #     pipeline=ProcessingPipeline.VLM,
-    #     vlm_pipeline_model=vlm_model_specs.VlmModelType.GRANITE_VISION_OLLAMA
-    # )
-    # yield TestOption(options=options, name="vlm_granite_vision_ollama", ci=False)
+    # NEW: VLM with default preset
+    options = ConvertDocumentsOptions(
+        pipeline=ProcessingPipeline.VLM,
+        vlm_pipeline_preset="default",
+    )
+    yield TestOption(options=options, name="vlm_preset_default", ci=False)
 
+    # DEPRECATED: VLM with local model configuration
     options = ConvertDocumentsOptions(
         pipeline=ProcessingPipeline.VLM,
         vlm_pipeline_model_local=VlmModelLocal.from_docling(
             vlm_model_specs.GRANITEDOCLING_MLX
         ),
     )
-    yield TestOption(options=options, name="vlm_local_granitedocling_mlx", ci=False)
+    yield TestOption(
+        options=options, name="vlm_local_granitedocling_mlx_DEPRECATED", ci=False
+    )
 
+    # NEW: VLM with custom MLX config (VlmConvertOptions as dict)
+    options = ConvertDocumentsOptions(
+        pipeline=ProcessingPipeline.VLM,
+        vlm_pipeline_custom_config={
+            "model_spec": {
+                "name": "Custom Granite Docling MLX",
+                "default_repo_id": "ibm-granite/granite-docling-258M-mlx",
+                "prompt": "Convert this page to docling.",
+                "response_format": "doctags",
+            },
+            "engine_options": {
+                "engine_type": "mlx",
+                "trust_remote_code": False,
+            },
+            "scale": 2.0,
+            "batch_size": 1,
+        },
+    )
+    yield TestOption(options=options, name="vlm_custom_mlx_config", ci=False)
+
+    # DEPRECATED: VLM with API model configuration
     options = ConvertDocumentsOptions(
         pipeline=ProcessingPipeline.VLM,
         vlm_pipeline_model_api=VlmModelApi(
@@ -187,12 +231,39 @@ def convert_options_gen() -> Iterable[TestOption]:
             prompt="Convert this page to docling.",
         ),
     )
-    yield TestOption(options=options, name="vlm_lmstudio_granitedocling_mlx", ci=False)
+    yield TestOption(
+        options=options, name="vlm_lmstudio_granitedocling_mlx_DEPRECATED", ci=False
+    )
+
+    # NEW: VLM with custom API config (VlmConvertOptions as dict)
+    options = ConvertDocumentsOptions(
+        pipeline=ProcessingPipeline.VLM,
+        vlm_pipeline_custom_config={
+            "model_spec": {
+                "name": "Custom Granite Docling API",
+                "default_repo_id": "ibm-granite/granite-docling-258M-mlx",
+                "prompt": "Convert this page to docling.",
+                "response_format": "doctags",
+            },
+            "engine_options": {
+                "engine_type": "api",
+                "url": "http://localhost:1234/v1/chat/completions",
+                "params": {"model": "ibm-granite/granite-docling-258M-mlx"},
+            },
+            "scale": 2.0,
+            "batch_size": 1,
+        },
+    )
+    yield TestOption(options=options, name="vlm_custom_api_config", ci=False)
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("test_option", convert_options_gen(), ids=lambda o: o.name)
 async def test_convert_url(orchestrator: LocalOrchestrator, test_option: TestOption):
+    """Test document conversion with both deprecated and new configuration styles.
+
+    Tests with '_DEPRECATED' suffix should trigger deprecation warnings.
+    """
     options = test_option.options
 
     if os.getenv("CI") and not test_option.ci:
@@ -201,11 +272,20 @@ async def test_convert_url(orchestrator: LocalOrchestrator, test_option: TestOpt
     sources: list[TaskSource] = []
     sources.append(HttpSource(url="https://arxiv.org/pdf/2311.18481"))
 
-    task = await orchestrator.enqueue(
-        sources=sources,
-        convert_options=options,
-        target=InBodyTarget(),
-    )
+    # Check if this is a deprecated test case and expect deprecation warning
+    if "_DEPRECATED" in test_option.name:
+        with pytest.warns(DeprecationWarning):
+            task = await orchestrator.enqueue(
+                sources=sources,
+                convert_options=options,
+                target=InBodyTarget(),
+            )
+    else:
+        task = await orchestrator.enqueue(
+            sources=sources,
+            convert_options=options,
+            target=InBodyTarget(),
+        )
 
     await _wait_task_complete(orchestrator, task.task_id)
     task_result = await orchestrator.task_result(task_id=task.task_id)

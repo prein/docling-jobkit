@@ -1,18 +1,34 @@
 # Define the input options for the API
-from typing import Annotated, Any, Optional
+import warnings
+from typing import Annotated, Any, Optional, Union
 
-from pydantic import AnyUrl, BaseModel, Field, PositiveInt, model_validator
+from pydantic import (
+    AnyUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PositiveInt,
+    field_validator,
+    model_validator,
+)
 from typing_extensions import Self
 
 from docling.datamodel import vlm_model_specs
 from docling.datamodel.base_models import InputFormat, OutputFormat
+
+# Import new engine system (available in docling>=2.73.0)
 from docling.datamodel.pipeline_options import (
+    CodeFormulaVlmOptions,
     PdfBackend,
     PictureDescriptionBaseOptions,
+    PictureDescriptionVlmEngineOptions,
     ProcessingPipeline,
     TableFormerMode,
     TableStructureOptions,
+    VlmConvertOptions,
 )
+
+# Import legacy types for backwards compatibility
 from docling.datamodel.pipeline_options_vlm_model import (
     InferenceFramework,
     InlineVlmOptions,
@@ -236,6 +252,8 @@ class VlmModelApi(BaseModel):
 
 
 class ConvertDocumentsOptions(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
     from_formats: Annotated[
         list[InputFormat],
         Field(
@@ -487,7 +505,8 @@ class ConvertDocumentsOptions(BaseModel):
     picture_description_local: Annotated[
         Optional[PictureDescriptionLocal],
         Field(
-            description="Options for running a local vision-language model in the picture description. The parameters refer to a model hosted on Hugging Face. This parameter is mutually exclusive with picture_description_api.",
+            deprecated=True,
+            description="DEPRECATED: Options for running a local vision-language model in the picture description. The parameters refer to a model hosted on Hugging Face. This parameter is mutually exclusive with picture_description_api. Please migrate to picture_description_preset or picture_description_custom_config.",
             examples=[
                 PictureDescriptionLocal(repo_id="ibm-granite/granite-vision-3.2-2b"),
                 PictureDescriptionLocal(repo_id="HuggingFaceTB/SmolVLM-256M-Instruct"),
@@ -498,7 +517,8 @@ class ConvertDocumentsOptions(BaseModel):
     picture_description_api: Annotated[
         Optional[PictureDescriptionApi],
         Field(
-            description="API details for using a vision-language model in the picture description. This parameter is mutually exclusive with picture_description_local.",
+            deprecated=True,
+            description="DEPRECATED: API details for using a vision-language model in the picture description. This parameter is mutually exclusive with picture_description_local. Please migrate to picture_description_preset or picture_description_custom_config.",
             examples=[
                 PictureDescriptionApi(
                     url="http://localhost:1234/v1/chat/completions",
@@ -515,14 +535,16 @@ class ConvertDocumentsOptions(BaseModel):
     vlm_pipeline_model: Annotated[
         Optional[vlm_model_specs.VlmModelType],
         Field(
-            description="Preset of local and API models for the vlm pipeline. This parameter is mutually exclusive with vlm_pipeline_model_local and vlm_pipeline_model_api. Use the other options for more parameters.",
+            deprecated=True,
+            description="DEPRECATED: Preset of local and API models for the vlm pipeline. This parameter is mutually exclusive with vlm_pipeline_model_local and vlm_pipeline_model_api. Use the other options for more parameters. Please migrate to vlm_pipeline_preset or vlm_pipeline_custom_config.",
             examples=[vlm_model_specs.VlmModelType.GRANITEDOCLING],
         ),
     ] = None
     vlm_pipeline_model_local: Annotated[
         Optional[VlmModelLocal],
         Field(
-            description="Options for running a local vision-language model for the vlm pipeline. The parameters refer to a model hosted on Hugging Face. This parameter is mutually exclusive with vlm_pipeline_model_api and vlm_pipeline_model.",
+            deprecated=True,
+            description="DEPRECATED: Options for running a local vision-language model for the vlm pipeline. The parameters refer to a model hosted on Hugging Face. This parameter is mutually exclusive with vlm_pipeline_model_api and vlm_pipeline_model. Please migrate to vlm_pipeline_preset or vlm_pipeline_custom_config.",
             examples=[
                 VlmModelLocal.from_docling(vlm_model_specs.GRANITEDOCLING_TRANSFORMERS),
                 VlmModelLocal.from_docling(vlm_model_specs.GRANITEDOCLING_MLX),
@@ -534,7 +556,8 @@ class ConvertDocumentsOptions(BaseModel):
     vlm_pipeline_model_api: Annotated[
         Optional[VlmModelApi],
         Field(
-            description="API details for using a vision-language model for the vlm pipeline. This parameter is mutually exclusive with vlm_pipeline_model_local and vlm_pipeline_model.",
+            deprecated=True,
+            description="DEPRECATED: API details for using a vision-language model for the vlm pipeline. This parameter is mutually exclusive with vlm_pipeline_model_local and vlm_pipeline_model. Please migrate to vlm_pipeline_preset or vlm_pipeline_custom_config.",
             examples=[
                 VlmModelApi(
                     url="http://localhost:1234/v1/chat/completions",
@@ -545,6 +568,131 @@ class ConvertDocumentsOptions(BaseModel):
             ],
         ),
     ] = None
+
+    # === NEW: Preset Selection OR Custom Config ===
+
+    # Option 1: Use preset (recommended)
+    vlm_pipeline_preset: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description='Preset ID to use (e.g., "default", "granite_docling"). '
+            'Use "default" for stable, admin-controlled configuration.',
+            examples=["default", "granite_docling"],
+        ),
+    ] = None
+
+    picture_description_preset: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Preset ID for picture description.",
+            examples=["default", "smolvlm", "granite_vision"],
+        ),
+    ] = None
+
+    code_formula_preset: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Preset ID for code/formula extraction.",
+            examples=["default"],
+        ),
+    ] = None
+
+    # Option 2: Custom configuration (if allowed by config)
+    vlm_pipeline_custom_config: Annotated[
+        Optional[Union[VlmConvertOptions, dict]],
+        Field(
+            default=None,
+            description="Custom VLM configuration including model spec and engine options. "
+            "Only available if admin allows it. Must include 'model_spec' and 'engine_options'.",
+        ),
+    ] = None
+
+    picture_description_custom_config: Annotated[
+        Optional[Union[PictureDescriptionVlmEngineOptions, dict]],
+        Field(
+            default=None,
+            description="Custom picture description configuration including model spec and engine options.",
+        ),
+    ] = None
+
+    code_formula_custom_config: Annotated[
+        Optional[Union[CodeFormulaVlmOptions, dict]],
+        Field(
+            default=None,
+            description="Custom code/formula extraction configuration including model spec and engine options.",
+        ),
+    ] = None
+
+    # Field validators for deprecated fields - trigger warnings on assignment
+    @field_validator("picture_description_api", mode="before")
+    @classmethod
+    def validate_picture_description_api(cls, v):
+        """Emit deprecation warning when picture_description_api is set."""
+        if v is not None:
+            warnings.warn(
+                "picture_description_api is deprecated. "
+                "Please migrate to picture_description_preset or "
+                "picture_description_custom_config.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return v
+
+    @field_validator("picture_description_local", mode="before")
+    @classmethod
+    def validate_picture_description_local(cls, v):
+        """Emit deprecation warning when picture_description_local is set."""
+        if v is not None:
+            warnings.warn(
+                "picture_description_local is deprecated. "
+                "Please migrate to picture_description_preset or "
+                "picture_description_custom_config.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return v
+
+    @field_validator("vlm_pipeline_model", mode="before")
+    @classmethod
+    def validate_vlm_pipeline_model(cls, v):
+        """Emit deprecation warning when vlm_pipeline_model is set."""
+        if v is not None:
+            warnings.warn(
+                "vlm_pipeline_model is deprecated. "
+                "Please migrate to vlm_pipeline_preset or vlm_pipeline_custom_config.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return v
+
+    @field_validator("vlm_pipeline_model_local", mode="before")
+    @classmethod
+    def validate_vlm_pipeline_model_local(cls, v):
+        """Emit deprecation warning when vlm_pipeline_model_local is set."""
+        if v is not None:
+            warnings.warn(
+                "vlm_pipeline_model_local is deprecated. "
+                "Please migrate to vlm_pipeline_preset or vlm_pipeline_custom_config.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return v
+
+    @field_validator("vlm_pipeline_model_api", mode="before")
+    @classmethod
+    def validate_vlm_pipeline_model_api(cls, v):
+        """Emit deprecation warning when vlm_pipeline_model_api is set."""
+        if v is not None:
+            warnings.warn(
+                "vlm_pipeline_model_api is deprecated. "
+                "Please migrate to vlm_pipeline_preset or vlm_pipeline_custom_config.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return v
 
     @model_validator(mode="after")
     def picture_description_exclusivity(self) -> Self:
@@ -575,6 +723,78 @@ class ConvertDocumentsOptions(BaseModel):
         if num_not_nan > 1:
             raise ValueError(
                 "The parameters vlm_pipeline_model, vlm_pipeline_model_local and vlm_pipeline_model_api are mutually exclusive, only one of them can be set."
+            )
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_vlm_pipeline_options(self) -> Self:
+        """Ensure preset and custom config are mutually exclusive for VLM pipeline."""
+        if self.vlm_pipeline_preset and self.vlm_pipeline_custom_config:
+            raise ValueError(
+                "Cannot specify both vlm_pipeline_preset and vlm_pipeline_custom_config. "
+                "Please use one or the other."
+            )
+
+        # Check if using legacy fields with new fields
+        legacy_set = (
+            self.vlm_pipeline_model is not None
+            or self.vlm_pipeline_model_local is not None
+            or self.vlm_pipeline_model_api is not None
+        )
+        new_set = (
+            self.vlm_pipeline_preset is not None
+            or self.vlm_pipeline_custom_config is not None
+        )
+
+        if legacy_set and new_set:
+            raise ValueError(
+                "Cannot mix legacy VLM options (vlm_pipeline_model*) with new options "
+                "(vlm_pipeline_preset/custom_config). Please use only one approach."
+            )
+
+        # Note: Deprecation warnings are now emitted by field validators
+        # when the fields are set, not here in the model validator
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_picture_description_options(self) -> Self:
+        """Ensure preset and custom config are mutually exclusive for picture description."""
+        if self.picture_description_preset and self.picture_description_custom_config:
+            raise ValueError(
+                "Cannot specify both picture_description_preset and "
+                "picture_description_custom_config."
+            )
+
+        # Check if using legacy fields with new fields
+        legacy_set = (
+            self.picture_description_local is not None
+            or self.picture_description_api is not None
+        )
+        new_set = (
+            self.picture_description_preset is not None
+            or self.picture_description_custom_config is not None
+        )
+
+        if legacy_set and new_set:
+            raise ValueError(
+                "Cannot mix legacy picture description options (picture_description_local/api) "
+                "with new options (picture_description_preset/custom_config). "
+                "Please use only one approach."
+            )
+
+        # Note: Deprecation warnings are now emitted by field validators
+        # when the fields are set, not here in the model validator
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_code_formula_options(self) -> Self:
+        """Ensure preset and custom config are mutually exclusive for code/formula."""
+        if self.code_formula_preset and self.code_formula_custom_config:
+            raise ValueError(
+                "Cannot specify both code_formula_preset and code_formula_custom_config."
             )
 
         return self
