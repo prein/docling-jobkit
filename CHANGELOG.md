@@ -1,3 +1,15 @@
+## [v1.11.0](https://github.com/docling-project/docling-jobkit/releases/tag/v1.11.0) - 2026-02-18
+
+### Feature
+
+* Expose layout and table kind options ([#95](https://github.com/docling-project/docling-jobkit/issues/95)) ([`2835f8c`](https://github.com/docling-project/docling-jobkit/commit/2835f8cc0577ce254712726b949b443f57b507af))
+* Add preset-based configuration system for VLM pipelines with admin controls ([#92](https://github.com/docling-project/docling-jobkit/issues/92)) ([`091767f`](https://github.com/docling-project/docling-jobkit/commit/091767ff9d2d60800197fdba5f4a95bde5e6d0aa))
+
+### Fix
+
+* Use new pdf_backend ([#96](https://github.com/docling-project/docling-jobkit/issues/96)) ([`d7f713d`](https://github.com/docling-project/docling-jobkit/commit/d7f713dc5c508844b334ed9b0c285c08a6822324))
+* Wrap notifier calls so they can't kill the pubsub loop ([#94](https://github.com/docling-project/docling-jobkit/issues/94)) ([`d3ef814`](https://github.com/docling-project/docling-jobkit/commit/d3ef8142381b0088a886917c273e1d88c1eb4c75))
+
 ## [v1.10.2](https://github.com/docling-project/docling-jobkit/releases/tag/v1.10.2) - 2026-02-13
 
 ### Fix
