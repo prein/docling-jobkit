@@ -1,3 +1,9 @@
+## [v1.12.1](https://github.com/docling-project/docling-jobkit/releases/tag/v1.12.1) - 2026-02-24
+
+### Fix
+
+* Configure `failure_ttl` for RQ failed jobs ([#101](https://github.com/docling-project/docling-jobkit/issues/101)) ([`49dd773`](https://github.com/docling-project/docling-jobkit/commit/49dd77386bdd80b02803f96fd38d6d5240f48ec1))
+
 ## [v1.12.0](https://github.com/docling-project/docling-jobkit/releases/tag/v1.12.0) - 2026-02-24
 
 ### Feature
