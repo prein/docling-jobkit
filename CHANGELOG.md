@@ -1,3 +1,10 @@
+## [v1.12.0](https://github.com/docling-project/docling-jobkit/releases/tag/v1.12.0) - 2026-02-24
+
+### Feature
+
+* Allow setting maximum redis connections ([#100](https://github.com/docling-project/docling-jobkit/issues/100)) ([`e5f2e63`](https://github.com/docling-project/docling-jobkit/commit/e5f2e6337d4447edb62875cf1b6b467ce771516f))
+* Propagate error messages from worker failures to Task model ([#98](https://github.com/docling-project/docling-jobkit/issues/98)) ([`4bf6f91`](https://github.com/docling-project/docling-jobkit/commit/4bf6f912faeb295433e432803438813ca1933769))
+
 ## [v1.11.0](https://github.com/docling-project/docling-jobkit/releases/tag/v1.11.0) - 2026-02-18
 
 ### Feature
