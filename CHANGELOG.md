@@ -1,3 +1,9 @@
+## [v1.16.0](https://github.com/docling-project/docling-jobkit/releases/tag/v1.16.0) - 2026-04-07
+
+### Feature
+
+* Add preset system for table structure configuration ([#119](https://github.com/docling-project/docling-jobkit/issues/119)) ([`7f6d8ce`](https://github.com/docling-project/docling-jobkit/commit/7f6d8ce293b1bccb14df5512b2f3d65c5f9012f1))
+
 ## [v1.15.0](https://github.com/docling-project/docling-jobkit/releases/tag/v1.15.0) - 2026-04-01
 
 ### Feature
