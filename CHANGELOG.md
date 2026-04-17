@@ -1,3 +1,9 @@
+## [v1.17.1](https://github.com/docling-project/docling-jobkit/releases/tag/v1.17.1) - 2026-04-17
+
+### Fix
+
+* Harden Ray dispatcher initialization, recovery, and execution leases ([#122](https://github.com/docling-project/docling-jobkit/issues/122)) ([`f147cc0`](https://github.com/docling-project/docling-jobkit/commit/f147cc09419198addef4c040ec270881dfa142be))
+
 ## [v1.17.0](https://github.com/docling-project/docling-jobkit/releases/tag/v1.17.0) - 2026-04-14
 
 ### Feature
