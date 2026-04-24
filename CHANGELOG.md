@@ -1,3 +1,9 @@
+## [v1.18.0](https://github.com/docling-project/docling-jobkit/releases/tag/v1.18.0) - 2026-04-24
+
+### Feature
+
+* Expose ray settings for scaledown control ([#127](https://github.com/docling-project/docling-jobkit/issues/127)) ([`1e9ed53`](https://github.com/docling-project/docling-jobkit/commit/1e9ed53115c080f8d7bb58d899255a0373c565a1))
+
 ## [v1.17.1](https://github.com/docling-project/docling-jobkit/releases/tag/v1.17.1) - 2026-04-17
 
 ### Fix
